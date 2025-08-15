@@ -1,0 +1,71 @@
+@echo off
+setlocal enabledelayedexpansion
+
+REM ============================================================================
+REM == ESPN Fantasy Data Fetcher
+REM ==
+REM == This script runs the specified Python script (e.g., get_draft_data.py)
+REM == with the necessary environment variables.
+REM ============================================================================
+
+REM --- Configuration ---
+REM Set your league credentials here. These are required.
+set "LEAGUE_ID=YOUR_LEAGUE_ID"
+set "ESPN_S2=YOUR_ESPN_S2_COOKIE"
+set "SWID=YOUR_SWID_COOKIE"
+
+REM --- Argument Handling ---
+if "%~1"=="" (
+    echo ERROR: You must specify which Python script to run.
+    echo.
+    echo Usage: %~n0 ^<script_name.py^> [year] [output_file]
+    echo.
+    echo Examples:
+    echo   %~n0 get_draft_data.py
+    echo   %~n0 get_rosters.py 2022
+    echo   %~n0 get_draft_data.py 2021 draft_recap.txt
+    goto :eof
+)
+set "SCRIPT_TO_RUN=%~1"
+set "YEAR_ARG=%~2"
+set "OUTPUT_FILE=%~3"
+
+REM --- Year Logic ---
+REM If a year is not provided, default to the previous year.
+if defined YEAR_ARG (
+    echo Year provided: %YEAR_ARG%
+    set "SEASON_ID=%YEAR_ARG%"
+) else (
+    call :get_default_year
+)
+
+REM --- Execute the Python Script ---
+echo.
+echo Running %SCRIPT_TO_RUN% for the %SEASON_ID% season...
+echo.
+
+if defined OUTPUT_FILE (
+    echo Generating output file: %OUTPUT_FILE%
+    python %SCRIPT_TO_RUN% "%OUTPUT_FILE%"
+    echo.
+    echo Done. Output created at %OUTPUT_FILE%.
+) else (
+    echo Displaying output in console...
+    python %SCRIPT_TO_RUN%
+    echo.
+    echo Done.
+)
+
+endlocal
+goto :eof
+
+REM ============================================================================
+REM == Subroutines
+REM ============================================================================
+
+:get_default_year
+    echo No year provided. Calculating default year (current year - 1)...
+    for /f %%i in ('powershell -command "(Get-Date).Year"') do set "CURRENT_YEAR=%%i"
+    set /a "SEASON_ID=%CURRENT_YEAR% - 1"
+    echo Defaulting to %SEASON_ID% season.
+    goto :eof

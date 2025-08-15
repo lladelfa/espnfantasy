@@ -1,0 +1,9 @@
+# Ignore the local run script that contains sensitive credentials
+run_fantasy_data.bat
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment files
+.env
