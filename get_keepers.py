@@ -1,11 +1,12 @@
 
 import json
 import os
+import requests
 from espn_api.football import League
 
 # --- Configuration ---
 # The year of the fantasy league you want to query.
-LEAGUE_YEAR = 2024
+LEAGUE_YEAR = 2025
 
 def process_keeper_data():
     try:
@@ -26,9 +27,24 @@ def process_keeper_data():
             print(f"Error initializing ESPN API. Check your credentials and league ID. Details: {e}")
             return
 
-        # Load the keeper data from the local JSON file
-        with open(r'c:\Users\llade\Documents\GitHub\espnfantasy\keeper_response.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Construct the dynamic URL to fetch keeper data using the provided endpoint.
+        # This endpoint gives us the keeper selections before the draft is finalized.
+        keeper_url = (
+            f"https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/{LEAGUE_YEAR}"
+            f"/segments/0/leagues/{league_id}?view=mKeeperRosters"
+        )
+
+        # Use the same credentials (as cookies) to make an authenticated request
+        cookies = {"espn_s2": espn_s2, "SWID": swid}
+
+        try:
+            print("Fetching live keeper data from ESPN API...")
+            response = requests.get(keeper_url, cookies=cookies)
+            response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
+            data = response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error: Failed to fetch keeper data from the API. Details: {e}")
+            return
 
         teams = data.get('teams', [])
 
@@ -47,10 +63,8 @@ def process_keeper_data():
                     else:
                         print(f"  - Unknown Player (ID: {player_id})")
 
-    except FileNotFoundError:
-        print("Error: keeper_response.json not found. Please make sure the file exists in the correct directory.")
     except json.JSONDecodeError:
-        print("Error: Could not decode JSON from the file. The file might be corrupted or not in valid JSON format.")
+        print("Error: Could not decode the JSON response from the API. The data might be malformed.")
 
 if __name__ == "__main__":
     process_keeper_data()
