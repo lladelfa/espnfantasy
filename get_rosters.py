@@ -4,13 +4,10 @@ from espn_api.football import League
 from common import get_league
 
 
-def display_rosters(league: League, output_file: str = None):
+def fetch_rosters(league: League):
     """
-    Fetches a consolidated list of all players on all rosters.
-    Can export the data to a CSV file.
+    Fetches a consolidated list of all players on all rosters and returns the raw data.
     """
-    print(f"\nFetching rosters and draft data for the {league.year} season...")
-
     # Fetch draft data and create a mapping from player ID to draft info
     draft_map = {}
     try:
@@ -27,7 +24,7 @@ def display_rosters(league: League, output_file: str = None):
             }
     except Exception as e:
         # This might fail if the draft hasn't happened yet for the season
-        print(f"Warning: Could not fetch draft data. Draft rounds may not be displayed. Error: {e}")
+        pass
 
     all_players_data = []
     # Iterate through each team and player to populate the table
@@ -58,6 +55,23 @@ def display_rosters(league: League, output_file: str = None):
                 'Draft Pick': draft_pick,
                 'Keeper': keeper_status
             })
+
+    return all_players_data
+
+def display_rosters(league: League, output_file: str = None):
+    """
+    Fetches a consolidated list of all players on all rosters.
+    Can export the data to a CSV file.
+    """
+    print(f"\nFetching rosters and draft data for the {league.year} season...")
+
+    # Still show a warning if draft fetching fails during display
+    try:
+        _ = league.draft
+    except Exception as e:
+        print(f"Warning: Could not fetch draft data. Draft rounds may not be displayed. Error: {e}")
+
+    all_players_data = fetch_rosters(league)
 
     if output_file and output_file.lower().endswith('.csv'):
         print(f"Exporting roster data to {output_file}...")

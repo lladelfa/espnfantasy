@@ -46,9 +46,21 @@ How to get your cookies (for private leagues):
 5.  Locate the `espn_s2` and `swid` cookies and copy their values into the `run_fantasy_data.bat` file.
 
 
-Usage
------
-All tasks are run from the command line using the `run_fantasy_data.bat` script.
+Usage (Web Application)
+-----------------------
+A user-friendly web interface is available for running these scripts without the command line.
+
+1. Install dependencies:
+   pip install -r requirements.txt
+2. Start the web server:
+   python app.py
+3. Open your web browser and navigate to:
+   http://127.0.0.1:5000
+4. Fill out your League ID (and year/cookies if needed) and click "Fetch Data".
+
+Usage (Command Line)
+--------------------
+All tasks can still be run from the command line using the `run_fantasy_data.bat` script.
 
 Syntax:
     run_fantasy_data.bat <script_name.py> [year] [output_file]
