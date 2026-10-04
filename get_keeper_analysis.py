@@ -5,10 +5,74 @@ from collections import defaultdict
 from common import get_league
 
 
+def fetch_keeper_analysis(league_id: int = None, current_year: int = None, espn_s2: str = None, swid: str = None):
+    """
+    Fetches draft data for the last 3 years and analyzes consecutive
+    keeper streaks for players kept by the same team. Returns raw data.
+    """
+    if current_year is None:
+        current_year = datetime.datetime.now().year
+
+    years_to_check = range(current_year - 1, current_year - 4, -1)
+    player_keeper_history = defaultdict(list)
+
+    for year in years_to_check:
+        # Pass the league ID and cookies if provided, else rely on env vars in get_league
+        league = get_league(league_id=league_id, year=year, espn_s2=espn_s2, swid=swid, exit_on_error=False)
+
+        if not league.draft:
+            continue
+
+        for pick in league.draft:
+            if pick.keeper_status:
+                player_info = league.player_info(playerId=pick.playerId)
+                player_name = player_info.name if player_info else f"Unknown (ID: {pick.playerId})"
+
+                player_keeper_history[pick.playerId].append({
+                    "year": year,
+                    "team_id": pick.team.team_id,
+                    "team_name": pick.team.team_name,
+                    "player_name": player_name
+                })
+
+    consecutive_keepers = []
+    if not player_keeper_history:
+        return consecutive_keepers
+
+    most_recent_analyzed_year = years_to_check[0]
+
+    for player_id, history in player_keeper_history.items():
+        if len(history) < 2:
+            continue
+
+        history.sort(key=lambda x: x['year'], reverse=True)
+
+        if history[0]['year'] != most_recent_analyzed_year:
+            continue
+
+        streak = 1
+        last_team_id = history[0]['team_id']
+
+        for i in range(1, len(history)):
+            if history[i]['year'] == history[i-1]['year'] - 1 and history[i]['team_id'] == last_team_id:
+                streak += 1
+            else:
+                break
+
+        if streak > 1:
+            consecutive_keepers.append({
+                "name": history[0]['player_name'],
+                "team": history[0]['team_name'],
+                "streak": streak
+            })
+
+    consecutive_keepers.sort(key=lambda x: (-x['streak'], x['name']))
+    return consecutive_keepers
+
 def analyze_keepers(output_file: str = None):
     """
     Fetches draft data for the last 3 years and analyzes consecutive
-    keeper streaks for players kept by the same team.
+    keeper streaks for players kept by the same team. Displays to console or saves to CSV.
     """
     try:
         current_year = datetime.datetime.now().year
@@ -17,75 +81,25 @@ def analyze_keepers(output_file: str = None):
         
         print(f"Analyzing keeper data for seasons: {list(years_to_check)}...")
 
-        player_keeper_history = defaultdict(list)
-
+        # Still print progress for CLI users
         for year in years_to_check:
             print(f"\nFetching data for {year} season...")
-            # The get_league function is now flexible enough to be called with a specific year
             league = get_league(year=year)
-            
             if not league.draft:
                 print(f"Warning: No draft data found for {year}. Skipping.")
                 continue
 
-            keeper_count = 0
-            for pick in league.draft:
-                if pick.keeper_status:
-                    keeper_count += 1
-
-                    # --- ROBUST PLAYER NAME FETCH ---
-                    # Instead of pick.player_name, which can fail on older data,
-                    # we look up the player by their ID for reliability.
-                    player_info = league.player_info(playerId=pick.playerId)
-                    player_name = player_info.name if player_info else f"Unknown (ID: {pick.playerId})"
-
-                    player_keeper_history[pick.playerId].append({
-                        "year": year,
-                        "team_id": pick.team.team_id,
-                        "team_name": pick.team.team_name,
-                        "player_name": player_name
-                    })
+            keeper_count = sum(1 for pick in league.draft if pick.keeper_status)
             print(f"Found {keeper_count} keepers in {year}.")
 
         print("\n--- Keeper Streak Analysis ---")
-        consecutive_keepers = []
 
-        # The most recent season we are analyzing is the first in the list
-        most_recent_analyzed_year = years_to_check[0]
-
-        for player_id, history in player_keeper_history.items():
-            if len(history) < 2:
-                continue
-
-            # Sort by year descending to find the most recent streak
-            history.sort(key=lambda x: x['year'], reverse=True)
-
-            # A keeper streak is only relevant if it includes the most recent season.
-            if history[0]['year'] != most_recent_analyzed_year:
-                continue
-
-            streak = 1
-            last_team_id = history[0]['team_id']
-            
-            for i in range(1, len(history)):
-                # Check if the current pick is from the previous year and by the same team
-                if history[i]['year'] == history[i-1]['year'] - 1 and history[i]['team_id'] == last_team_id:
-                    streak += 1
-                else:
-                    break  # The streak is broken
-            
-            if streak > 1:
-                consecutive_keepers.append({
-                    "name": history[0]['player_name'],
-                    "team": history[0]['team_name'],
-                    "streak": streak
-                })
+        # Actually fetch the data using the new function
+        consecutive_keepers = fetch_keeper_analysis(current_year=current_year)
 
         if not consecutive_keepers:
             print("No players found with a keeper streak of 2 or more consecutive years.")
             return
-
-        consecutive_keepers.sort(key=lambda x: (-x['streak'], x['name']))
 
         if output_file and output_file.lower().endswith('.csv'):
             print(f"Exporting keeper analysis to {output_file}...")

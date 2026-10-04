@@ -4,6 +4,38 @@ from espn_api.football import League
 from common import get_league
 
 
+def fetch_draft_data(league: League):
+    """
+    Fetches the draft recap for a completed draft and returns the raw data.
+    """
+    draft_picks = league.draft
+
+    if not draft_picks:
+        return []
+
+    draft_data = []
+    for i, pick in enumerate(draft_picks):
+        team = pick.team.team_name
+        round_num = pick.round_num
+        pick_num = i + 1
+
+        # Robustly get player info to avoid errors with older seasons
+        player_info = league.player_info(playerId=pick.playerId)
+        if player_info:
+            player_name, position = player_info.name, player_info.position
+        else:
+            player_name, position = f"Unknown (ID: {pick.playerId})", "N/A"
+
+        draft_data.append({
+            'Round': round_num,
+            'Pick': pick_num,
+            'Player Name': player_name,
+            'Position': position,
+            'Team': team
+        })
+
+    return draft_data
+
 def display_draft_recap(league: League, output_file: str = None):
     """
     Fetches and displays the draft recap for a completed draft.
@@ -11,32 +43,11 @@ def display_draft_recap(league: League, output_file: str = None):
     """
     try:
         print(f"\nFetching draft data for the {league.year} season...")
-        draft_picks = league.draft
+        draft_data = fetch_draft_data(league)
 
-        if not draft_picks:
+        if not draft_data:
             print(f"Could not find any draft data for the {league.year} season.")
             return
-
-        draft_data = []
-        for i, pick in enumerate(draft_picks):
-            team = pick.team.team_name
-            round_num = pick.round_num
-            pick_num = i + 1
-
-            # Robustly get player info to avoid errors with older seasons
-            player_info = league.player_info(playerId=pick.playerId)
-            if player_info:
-                player_name, position = player_info.name, player_info.position
-            else:
-                player_name, position = f"Unknown (ID: {pick.playerId})", "N/A"
-
-            draft_data.append({
-                'Round': round_num,
-                'Pick': pick_num,
-                'Player Name': player_name,
-                'Position': position,
-                'Team': team
-            })
 
         if output_file and output_file.lower().endswith('.csv'):
             print(f"Exporting draft data to {output_file}...")

@@ -46,9 +46,36 @@ How to get your cookies (for private leagues):
 5.  Locate the `espn_s2` and `swid` cookies and copy their values into the `run_fantasy_data.bat` file.
 
 
-Usage
------
-All tasks are run from the command line using the `run_fantasy_data.bat` script.
+Usage (Web Application)
+-----------------------
+A user-friendly web interface is available for running these scripts without the command line.
+
+1. Install dependencies:
+   pip install -r requirements.txt
+2. Start the web server:
+   python app.py
+3. Open your web browser and navigate to:
+   http://127.0.0.1:5000
+4. Fill out your League ID (and year/cookies if needed) and click "Fetch Data".
+
+Securely Saving Credentials
+---------------------------
+To avoid entering your credentials every time, you have two secure options that will not be tracked by version control:
+
+Option A (Browser Local Storage):
+Simply fill out the form in the Web UI and hit "Fetch Data". Your browser will securely save the League ID, ESPN S2, and SWID cookies into `localStorage` and automatically pre-fill the form next time you load the page.
+
+Option B (.env file):
+Create a file named `.env` in the root folder of this project. The `.gitignore` file already excludes this from being committed. Add your credentials like so:
+LEAGUE_ID=123456
+SEASON_ID=2023
+ESPN_S2=your_s2_cookie_here
+SWID=your_swid_cookie_here
+The web application and command-line scripts will automatically detect and use these variables if you leave the fields blank.
+
+Usage (Command Line)
+--------------------
+All tasks can still be run from the command line using the `run_fantasy_data.bat` script.
 
 Syntax:
     run_fantasy_data.bat <script_name.py> [year] [output_file]

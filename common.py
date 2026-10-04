@@ -1,31 +1,45 @@
 import os
 import sys
 from espn_api.football import League
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
-def get_league(year: int = None) -> League:
+def get_league(league_id: int = None, year: int = None, espn_s2: str = None, swid: str = None, exit_on_error: bool = True) -> League:
     """
     Connects to the ESPN Fantasy Football league using configuration
-    from environment variables.
+    from parameters or environment variables.
 
-    :param year: Optional. The season year to connect to. If None, uses
-                 the SEASON_ID from environment variables.
+    :param league_id: Optional. The league ID.
+    :param year: Optional. The season year to connect to.
+    :param espn_s2: Optional. The ESPN_S2 cookie for private leagues.
+    :param swid: Optional. The SWID cookie for private leagues.
     """
-    # Load configuration from environment variables
+    # Load configuration from environment variables if not provided
     try:
-        league_id = int(os.environ["LEAGUE_ID"])
+        if league_id is None:
+            league_id = int(os.environ["LEAGUE_ID"])
+        else:
+            league_id = int(league_id)
+
         if year is None:
             season_id = int(os.environ["SEASON_ID"])
         else:
-            season_id = year
-    except (KeyError, ValueError):
-        print("Error: LEAGUE_ID and SEASON_ID environment variables must be set as integers.")
-        print("This is typically handled by the run_fantasy_data.bat file.")
-        sys.exit(1)
+            season_id = int(year)
+    except (KeyError, ValueError) as e:
+        err_msg = "Error: LEAGUE_ID and SEASON_ID must be provided or set as environment variables."
+        print(err_msg)
+        print("This is typically handled by the run_fantasy_data.bat file or the web app form.")
+        if exit_on_error:
+            sys.exit(1)
+        else:
+            raise ValueError(err_msg) from e
 
     # For private leagues, ESPN_S2 and SWID cookies are required.
-    espn_s2 = os.environ.get("ESPN_S2")
-    swid = os.environ.get("SWID")
+    espn_s2 = espn_s2 or os.environ.get("ESPN_S2")
+    swid = swid or os.environ.get("SWID")
 
     try:
         if espn_s2 and swid:
@@ -40,4 +54,7 @@ def get_league(year: int = None) -> League:
     except Exception as e:
         print(f"Error connecting to the league: {e}")
         print("Please ensure your league credentials and IDs are correct and up-to-date in the .bat file.")
-        sys.exit(1)
+        if exit_on_error:
+            sys.exit(1)
+        else:
+            raise Exception(f"Failed to connect to the league: {e}") from e
